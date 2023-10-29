@@ -37,7 +37,10 @@
 # Feel free to modify this file to suit your needs.
 ---
 version: '3'
+
+# Use `x-` indicates it's a common configuration that can be reused by other services
 x-airflow-common:
+  # the anchor name works like a reference to refer to the section with prefix `x-`
   &airflow-common
   build:
     context: ./containers/airflow/
@@ -56,11 +59,16 @@ x-airflow-common:
     WAREHOUSE_HOST: ${POSTGRES_HOST}
     WARREHOUSE_PORT: ${POSTGRES_PORT}
 
+  # docker compose volumes are bi-directional, to share files between your host (where the codebase exists) and Docker container
   volumes:
+    # When Airflow is looking for dags in '/opt/airflow/dags' (default path of dags) of that container, 
+    # it's actually accessing data in the git repo's ./dags
     - ./dags:/opt/airflow/dags
+
+    # a new logs generated in the container's /opt/airlfow/logs will be available in this git repo's `./logs` folder
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
-    - ./tests:/opt/airflow/tests
+    - ./tests:/opt/airflow/tests    
     - ./temp:/opt/airflow/temp
     - ./migrations:/opt/airflow/migrations
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
@@ -85,7 +93,9 @@ services:
       - "5432:5432"
 
   airflow-webserver:
+    # re-use the `x-airflow-common` configuration, which already created a docker image for airflow
     <<: *airflow-common
+    # will create a container `webserver`
     container_name: webserver
     command: webserver
     ports:

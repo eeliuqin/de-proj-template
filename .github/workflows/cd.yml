@@ -1,4 +1,13 @@
+# To make the CD work, ensure:
+# a) The cloud infra already set up by terraform
+# b) You've set up the private key by going to Settings > Secrets > Actions > New repository secret
+# # When the private key from the GitHub Secret is used to establish a connection, 
+# # the remote server validates it against the public key (already saved in the remote server), 
+# # ensuring that the connection is authorized
+
 name: CD
+# on defines when the workflow should be triggered
+# any time new code pushed to main branch
 on:
   push:
     branches:
@@ -8,10 +17,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to server
+
+        # ==== After merging into the main branch, our code of current git repo is copied to the EC2 server using cd.yml ====
+
+        # how? Github Actions will automatically pulls the action from the repo `https://github.com/easingthemes/ssh-deploy`
+        # we don't need to install anything
+        # easingthemes/ssh-deploy@main did: 1) ssh connect to the remote server 2) sync code difference
         uses: easingthemes/ssh-deploy@main
         env:
+          # This is the private SSH key used to access the EC2 instance. It’s securely stored in GitHub Secrets
+          # The private and public key pairs are created by Terraform
+          # After command `make infra-up`, Terraform did:
+          # 1) set up cloud infra
+          # 2) generate the key pairs
+          # 3) save the public key to AWS
+          # 4) output private key, ec2 public dns
+
+          # Once we have the private key (will output after above command, or manually execute`terraform -chdir=./terraform output -raw private_key`),
+          # and ec2 pubic dns value
+          # remote_user should be ubuntu
+          # Paste them to Git Action secret called SERVER_SSH_KEY, REMOTE_HOST, REMOTE_USER respectively (go to Github UI)
+
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          # The public dns of your EC2 instance, stored as a secret
           REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          # The username used to log in to the EC2 instance, stored as a secret
+          # The username depends on the AMI that used to launch the instance. For example, Ubuntu: ubuntu, CentOS: centos
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          # The root of the repo in GitHub Actions
           SOURCE: "./"
-          TARGET: "/home/ubuntu/data_engineering_project_template"
+          # Specifies the target directory on the remote server (EC2 server) where the files will be deployed
+          TARGET: "/home/ubuntu/de-proj-template"
