@@ -59,10 +59,10 @@ resource "aws_security_group" "sde_security_group" {
 # access is granted without requiring a password. 
 
 # Below resource will generate a private key as well as its associated public key (similar to ssh-gen)
-# its value will be saved in a state file `./terraform/tfstate`
+# its value will be saved in a state file `./terraform/tfstate`, but will be Re-generated every time you run the command (if need a fixed one, use ssh-gen)
 # After creating, we can access the private key: tls_private_key.custom_key.private_key_pem`
 # access the public key: `tls_private_key.custom_key.public_key_openssh`
-# but no worries, their values will be output as defined in output.tf
+# but no worries, their values will be output by running `make infra-config`
 resource "tls_private_key" "custom_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -96,7 +96,9 @@ data "aws_ami" "ubuntu" {
 # You can search how to set multiple instances, and ensure scalability
 
 # AWS will assign a Public DNS to the EC2 instance
-# To make the DNS available as an output, add it to output.tf
+# By adding it to output.tf, we can retrive it later (when ssh to the EC2 instance)
+# By default, the username to SSH into the instance depends on the AMI (Amazon Machine Image) that you've chosen.
+# Here, the username is `ubuntu`
 resource "aws_instance" "sde_ec2" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
@@ -139,8 +141,8 @@ sudo apt install make
 echo 'Clone git repo to EC2'
 cd /home/ubuntu && git clone ${var.repo_url}
 
-echo 'CD to data_engineering_project_template directory'
-cd data_engineering_project_template
+echo 'CD to de-proj-template directory'
+cd de-proj-template
 
 echo 'Start containers & Run db migrations'
 make up

@@ -1,6 +1,7 @@
 # step 1: from a dev branch, git push
 # step 2: pull request to main branch
 # another file cd.yml will execute step 3 (after merging to main branch)
+
 name: CI
 on: [pull_request]
 jobs:

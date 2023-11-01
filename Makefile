@@ -68,11 +68,13 @@ tf-init:
 infra-up:
 	terraform -chdir=./terraform apply
 
+# after `terraform destroy`, output won't work as state file has been destroyed
+infra-config:
+	terraform -chdir=./terraform output
+
 infra-down:
 	terraform -chdir=./terraform destroy
 
-infra-config:
-	terraform -chdir=./terraform output
 
 ####################################################################################################################
 # Create tables in Warehouse
@@ -97,10 +99,19 @@ warehouse-rollback:
 ####################################################################################################################
 # Port forwarding to local machine (Metabase and Airflow is running in EC2, but you can access them in your machine without actually run them)
 
-# After executing `terraform apply`, terraform generated private key and saved in tfstate file
+# After executing `terraform apply`, terraform generated private key, aws ec2 instance's public dns... all saved in tfstate file
 # we can see its value in the output or use `output -raw private_key` to get that key 
 
+
 # After port forwarding, you can access the EC2's 3000 port using http://localhost:3001
+
+# ssh: Initiates an SSH connection.
+# -o "IdentitiesOnly yes": Ensures that only the identity file provided with the -i flag is used for authentication.
+# -i private_key.pem: Specifies the private key file to use for authentication.
+# ubuntu@$(terraform -chdir=./terraform output -raw ec2_public_dns): SSH as the ubuntu user to the EC2 instance whose public DNS is retrieved from Terraform's output.
+# -N: Tells SSH to not execute any commands on the remote server, useful when just forwarding ports.
+# -f: Puts SSH in the background once the authentication is successful.
+# -L 3001:$(terraform -chdir=./terraform output -raw ec2_public_dns):3000: Sets up local port forwarding from local port 3001 to port 3000 on the EC2 instance.
 cloud-metabase:
 	terraform -chdir=./terraform output -raw private_key > private_key.pem && chmod 600 private_key.pem && ssh -o "IdentitiesOnly yes" -i private_key.pem ubuntu@$$(terraform -chdir=./terraform output -raw ec2_public_dns) -N -f -L 3001:$$(terraform -chdir=./terraform output -raw ec2_public_dns):3000 && open http://localhost:3001 && rm private_key.pem
 
@@ -110,6 +121,6 @@ cloud-airflow:
 
 ####################################################################################################################
 # Helpers
-
+# SSH into the EC2 instance
 ssh-ec2:
 	terraform -chdir=./terraform output -raw private_key > private_key.pem && chmod 600 private_key.pem && ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i private_key.pem ubuntu@$$(terraform -chdir=./terraform output -raw ec2_public_dns) && rm private_key.pem

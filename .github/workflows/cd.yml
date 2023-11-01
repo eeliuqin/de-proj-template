@@ -39,7 +39,7 @@ jobs:
           # Paste them to Git Action secret called SERVER_SSH_KEY, REMOTE_HOST, REMOTE_USER respectively (go to Github UI)
 
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          # The public dns of your EC2 instance, stored as a secret
+          # The public dns of your EC2 instance, we need to manually store it to Github Secret
           REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
           # The username used to log in to the EC2 instance, stored as a secret
           # The username depends on the AMI that used to launch the instance. For example, Ubuntu: ubuntu, CentOS: centos
