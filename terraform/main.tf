@@ -9,6 +9,11 @@ terraform {
   required_version = ">= 1.2.0"
 }
 
+# When the provider is AWS and without specific username and password, 
+# Terraform will rely on the AWS SDK's method of discovering credentials, in the order of:
+# Environment variables
+# ~/.aws/credentials (600, only the owner can read it)
+
 provider "aws" {
   region  = var.aws_region
   profile = "default"
@@ -151,6 +156,21 @@ echo "-------------------------END SETUP---------------------------"
 
 EOF
 
+}
+
+# Save the private key to .pem for later use (for dev only, if production, use remote backend)
+resource "local_sensitive_file" "pem_file" {
+  content = tls_private_key.custom_key.private_key_pem
+  filename = "${path.module}/../creds/private_key_for_aws.pem"
+  file_permission = "600"
+  directory_permission = "700"
+}
+
+# Save EC2 Public DNS (for later SSH)
+resource "local_file" "ec2_public_dns" {
+  content  = aws_instance.sde_ec2.public_dns
+  filename = "${path.module}/../creds/ec2_public_dns.txt"
+  file_permission = "600"
 }
 
 # EC2 budget constraint

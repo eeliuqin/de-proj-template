@@ -80,4 +80,7 @@ override.tf.json
 terraform.rc
 Footer
 
+# Ignore private_key, ec2_public_dns
+**/creds/*
+
 .vscode

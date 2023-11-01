@@ -107,20 +107,32 @@ warehouse-rollback:
 
 # ssh: Initiates an SSH connection.
 # -o "IdentitiesOnly yes": Ensures that only the identity file provided with the -i flag is used for authentication.
-# -i private_key.pem: Specifies the private key file to use for authentication.
-# ubuntu@$(terraform -chdir=./terraform output -raw ec2_public_dns): SSH as the ubuntu user to the EC2 instance whose public DNS is retrieved from Terraform's output.
+# -i: Specifies the private key file to use for authentication.
+# ubuntu@: SSH as the ubuntu username to the EC2 instance.
 # -N: Tells SSH to not execute any commands on the remote server, useful when just forwarding ports.
 # -f: Puts SSH in the background once the authentication is successful.
-# -L 3001:$(terraform -chdir=./terraform output -raw ec2_public_dns):3000: Sets up local port forwarding from local port 3001 to port 3000 on the EC2 instance.
-cloud-metabase:
-	terraform -chdir=./terraform output -raw private_key > private_key.pem && chmod 600 private_key.pem && ssh -o "IdentitiesOnly yes" -i private_key.pem ubuntu@$$(terraform -chdir=./terraform output -raw ec2_public_dns) -N -f -L 3001:$$(terraform -chdir=./terraform output -raw ec2_public_dns):3000 && open http://localhost:3001 && rm private_key.pem
+# -L 3001:(...):3000: Sets up local port forwarding from local port 3001 to port 3000 on the EC2 instance.
 
-# you can access the EC2's 8080 port using http://localhost:8081 on your local machine's browser
+EC2_DNS=$(shell cat creds/ec2_public_dns.txt)
+
+cloud-metabase:
+	ssh -o "IdentitiesOnly yes" -i creds/private_key_for_aws.pem ubuntu@$(EC2_DNS) -N -f -L 3001:$(EC2_DNS):3000
+	open http://localhost:3001
+
 cloud-airflow:
-	terraform -chdir=./terraform output -raw private_key > private_key.pem && chmod 600 private_key.pem && ssh -o "IdentitiesOnly yes" -i private_key.pem ubuntu@$$(terraform -chdir=./terraform output -raw ec2_public_dns) -N -f -L 8081:$$(terraform -chdir=./terraform output -raw ec2_public_dns):8080 && open http://localhost:8081 && rm private_key.pem
+	ssh -o "IdentitiesOnly yes" -i creds/private_key_for_aws.pem ubuntu@$(EC2_DNS) -N -f -L 8081:$(EC2_DNS):8080
+	open http://localhost:8081
+
+cloud-both:
+	ssh -o "IdentitiesOnly yes" -i creds/private_key_for_aws.pem ubuntu@$(EC2_DNS) -N -f -L 3001:$(EC2_DNS):3000 -L 8081:$(EC2_DNS):8080
+	open http://localhost:3001
+	open http://localhost:8081
+
+close_tunnel:
+	pkill -f "i creds/private_key_for_aws.pem"
 
 ####################################################################################################################
 # Helpers
 # SSH into the EC2 instance
 ssh-ec2:
-	terraform -chdir=./terraform output -raw private_key > private_key.pem && chmod 600 private_key.pem && ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i private_key.pem ubuntu@$$(terraform -chdir=./terraform output -raw ec2_public_dns) && rm private_key.pem
+	ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i creds/private_key_for_aws.pem ubuntu@$(EC2_DNS)
